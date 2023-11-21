@@ -1,6 +1,8 @@
 //! The `validator` module hosts all the validator microservices.
 
 pub use solana_perf::report_target_features;
+use solana_poh::poh_recorder;
+use solana_sdk::pubkey::PubkeyError;
 use {
     crate::{
         accounts_hash_verifier::{AccountsHashFaultInjector, AccountsHashVerifier},
@@ -110,6 +112,7 @@ use {
         exit::Exit,
         genesis_config::GenesisConfig,
         hash::Hash,
+        poh_config::PohConfig,
         pubkey::Pubkey,
         shred_version::compute_shred_version,
         signature::{Keypair, Signer},
@@ -441,34 +444,17 @@ struct TransactionHistoryServices {
 
 pub struct Validator {
     validator_exit: Arc<RwLock<Exit>>,
-    json_rpc_service: Option<JsonRpcService>,
-    pubsub_service: Option<PubSubService>,
-    rpc_completed_slots_service: JoinHandle<()>,
-    optimistically_confirmed_bank_tracker: Option<OptimisticallyConfirmedBankTracker>,
-    transaction_status_service: Option<TransactionStatusService>,
-    rewards_recorder_service: Option<RewardsRecorderService>,
-    cache_block_meta_service: Option<CacheBlockMetaService>,
-    entry_notifier_service: Option<EntryNotifierService>,
     system_monitor_service: Option<SystemMonitorService>,
-    sample_performance_service: Option<SamplePerformanceService>,
     poh_timing_report_service: PohTimingReportService,
-    stats_reporter_service: StatsReporterService,
     gossip_service: GossipService,
     serve_repair_service: ServeRepairService,
-    completed_data_sets_service: CompletedDataSetsService,
-    snapshot_packager_service: Option<SnapshotPackagerService>,
     poh_recorder: Arc<RwLock<PohRecorder>>,
     poh_service: PohService,
-    tpu: Tpu,
     tvu: Tvu,
-    ip_echo_server: Option<solana_net_utils::IpEchoServer>,
     pub cluster_info: Arc<ClusterInfo>,
     pub bank_forks: Arc<RwLock<BankForks>>,
     pub blockstore: Arc<Blockstore>,
     geyser_plugin_service: Option<GeyserPluginService>,
-    blockstore_metric_report_service: BlockstoreMetricReportService,
-    accounts_background_service: AccountsBackgroundService,
-    accounts_hash_verifier: AccountsHashVerifier,
     turbine_quic_endpoint: Endpoint,
     turbine_quic_endpoint_runtime: Option<TokioRuntime>,
     turbine_quic_endpoint_join_handle: solana_turbine::quic_endpoint::AsyncTryJoinHandle,
@@ -675,7 +661,7 @@ impl Validator {
         let poh_timing_report_service =
             PohTimingReportService::new(poh_timing_point_receiver, exit.clone());
 
-        let (
+        /*let (
             genesis_config,
             bank_forks,
             blockstore,
@@ -707,7 +693,18 @@ impl Validator {
             transaction_notifier,
             entry_notifier,
             Some(poh_timing_point_sender.clone()),
-        )?;
+        )?;*/
+        let ledger_path = Path::new("./ledger");
+        let BlockstoreSignals {
+            blockstore,
+            ledger_signal_receiver,
+            ..
+        } = Blockstore::open_with_signal(&ledger_path, BlockstoreOptions::default()).unwrap();
+        let blockstore = Arc::new(blockstore);
+        let genesis_config = GenesisConfig::load(Path::new("./ledger")).unwrap();
+        let bank = Bank::new_for_tests(&genesis_config);
+        let bank_forks = BankForks::new_rw_arc(bank);
+        let bank = Arc::new(Bank::new_for_tests(&genesis_config));
         let hard_forks = bank_forks.read().unwrap().root_bank().hard_forks();
         if !hard_forks.is_empty() {
             info!("Hard forks: {:?}", hard_forks);
@@ -721,7 +718,7 @@ impl Validator {
 
         Self::print_node_info(&node);
 
-        if let Some(expected_shred_version) = config.expected_shred_version {
+        /*if let Some(expected_shred_version) = config.expected_shred_version {
             if expected_shred_version != node.info.shred_version() {
                 return Err(format!(
                     "shred version mismatch: expected {} found: {}",
@@ -729,7 +726,7 @@ impl Validator {
                     node.info.shred_version(),
                 ));
             }
-        }
+        }*/
 
         let mut cluster_info = ClusterInfo::new(
             node.info.clone(),
@@ -746,29 +743,29 @@ impl Validator {
             config.accounts_hash_interval_slots,
         ));
 
-        let (snapshot_package_sender, snapshot_packager_service) =
-            if config.snapshot_config.should_generate_snapshots() {
-                let enable_gossip_push = true;
-                let (snapshot_package_sender, snapshot_package_receiver) =
-                    crossbeam_channel::unbounded();
-                let snapshot_packager_service = SnapshotPackagerService::new(
-                    snapshot_package_sender.clone(),
-                    snapshot_package_receiver,
-                    starting_snapshot_hashes,
-                    exit.clone(),
-                    cluster_info.clone(),
-                    config.snapshot_config.clone(),
-                    enable_gossip_push,
-                );
-                (
-                    Some(snapshot_package_sender),
-                    Some(snapshot_packager_service),
-                )
-            } else {
-                (None, None)
-            };
+        /*let (snapshot_package_sender, snapshot_packager_service) =
+        if config.snapshot_config.should_generate_snapshots() {
+            let enable_gossip_push = true;
+            let (snapshot_package_sender, snapshot_package_receiver) =
+                crossbeam_channel::unbounded();
+            let snapshot_packager_service = SnapshotPackagerService::new(
+                snapshot_package_sender.clone(),
+                snapshot_package_receiver,
+                starting_snapshot_hashes,
+                exit.clone(),
+                cluster_info.clone(),
+                config.snapshot_config.clone(),
+                enable_gossip_push,
+            );
+            (
+                Some(snapshot_package_sender),
+                Some(snapshot_packager_service),
+            )
+        } else {
+            (None, None)
+        };*/
 
-        let (accounts_package_sender, accounts_package_receiver) = crossbeam_channel::unbounded();
+        /*let (accounts_package_sender, accounts_package_receiver) = crossbeam_channel::unbounded();
         let accounts_hash_verifier = AccountsHashVerifier::new(
             accounts_package_sender.clone(),
             accounts_package_receiver,
@@ -845,21 +842,21 @@ impl Validator {
 
         if config.process_ledger_before_services {
             process_blockstore.process()?;
-        }
+        }*/
         *start_progress.write().unwrap() = ValidatorStartProgress::StartingServices;
 
-        let sample_performance_service =
-            if config.rpc_addrs.is_some() && config.rpc_config.enable_rpc_transaction_history {
-                Some(SamplePerformanceService::new(
-                    &bank_forks,
-                    blockstore.clone(),
-                    exit.clone(),
-                ))
-            } else {
-                None
-            };
+        /*let sample_performance_service =
+        if config.rpc_addrs.is_some() && config.rpc_config.enable_rpc_transaction_history {
+            Some(SamplePerformanceService::new(
+                &bank_forks,
+                blockstore.clone(),
+                exit.clone(),
+            ))
+        } else {
+            None
+        };*/
 
-        let mut block_commitment_cache = BlockCommitmentCache::default();
+        /*let mut block_commitment_cache = BlockCommitmentCache::default();
         let bank_forks_guard = bank_forks.read().unwrap();
         block_commitment_cache.initialize_slots(
             bank_forks_guard.working_bank().slot(),
@@ -1050,8 +1047,9 @@ impl Validator {
         let (stats_reporter_sender, stats_reporter_receiver) = unbounded();
 
         let stats_reporter_service =
-            StatsReporterService::new(stats_reporter_receiver, exit.clone());
+            StatsReporterService::new(stats_reporter_receiver, exit.clone());*/
 
+        let (stats_reporter_sender, stats_reporter_receiver) = unbounded();
         let gossip_service = GossipService::new(
             &cluster_info,
             Some(bank_forks.clone()),
@@ -1087,7 +1085,7 @@ impl Validator {
             repair_whitelist: config.repair_whitelist.clone(),
         });
 
-        let waited_for_supermajority = wait_for_supermajority(
+        /*let waited_for_supermajority = wait_for_supermajority(
             config,
             Some(&mut process_blockstore),
             &bank_forks,
@@ -1095,14 +1093,28 @@ impl Validator {
             rpc_override_health_check,
             &start_progress,
         )
-        .map_err(|err| format!("wait_for_supermajority failed: {err:?}"))?;
+        .map_err(|err| format!("wait_for_supermajority failed: {err:?}"))?;*/
 
-        let blockstore_metric_report_service =
+        /*let blockstore_metric_report_service =
             BlockstoreMetricReportService::new(blockstore.clone(), exit.clone());
 
         let wait_for_vote_to_start_leader =
-            !waited_for_supermajority && !config.no_wait_for_vote_to_start_leader;
+            !waited_for_supermajority && !config.no_wait_for_vote_to_start_leader;*/
 
+        let prev_hash = bank.last_blockhash();
+        let (mut poh_recorder, _entry_receiver, record_receiver) = PohRecorder::new(
+            0,
+            prev_hash,
+            bank.clone(),
+            Some((4, 4)),
+            bank.ticks_per_slot(),
+            &Pubkey::default(),
+            blockstore.clone(),
+            &Arc::new(LeaderScheduleCache::new_from_bank(&bank)),
+            &PohConfig::default(),
+            Arc::new(AtomicBool::default()),
+        );
+        let poh_recorder = Arc::new(RwLock::new(poh_recorder));
         let poh_service = PohService::new(
             poh_recorder.clone(),
             &genesis_config.poh_config,
@@ -1125,11 +1137,11 @@ impl Validator {
         let (gossip_verified_vote_hash_sender, gossip_verified_vote_hash_receiver) = unbounded();
         let (duplicate_confirmed_slot_sender, duplicate_confirmed_slots_receiver) = unbounded();
 
-        let rpc_completed_slots_service = RpcCompletedSlotsService::spawn(
+        /*let rpc_completed_slots_service = RpcCompletedSlotsService::spawn(
             completed_slots_receiver,
             rpc_subscriptions.clone(),
             exit.clone(),
-        );
+        );*/
 
         let (banking_tracer, tracer_thread) =
             BankingTracer::new((config.banking_trace_dir_byte_limit > 0).then_some((
@@ -1147,9 +1159,9 @@ impl Validator {
             info!("Disabled banking trace");
         }
 
-        let entry_notification_sender = entry_notifier_service
-            .as_ref()
-            .map(|service| service.sender_cloned());
+        /*let entry_notification_sender = entry_notifier_service
+        .as_ref()
+        .map(|service| service.sender_cloned());*/
 
         // test-validator crate may start the validator in a tokio runtime
         // context which forces us to use the same runtime because a nested
@@ -1210,22 +1222,17 @@ impl Validator {
             )
             .unwrap();
 
-        let in_wen_restart = config.wen_restart_proto_path.is_some() && !waited_for_supermajority;
-        let tower = match process_blockstore.process_to_create_tower() {
-            Ok(tower) => {
-                info!("Tower state: {:?}", tower);
-                tower
-            }
-            Err(e) => {
-                warn!(
-                    "Unable to retrieve tower: {:?} creating default tower....",
-                    e
-                );
-                Tower::default()
-            }
-        };
+        let in_wen_restart = config.wen_restart_proto_path.is_some();
+        let tower = Tower::default();
         let last_vote = tower.last_vote();
 
+        let max_complete_transaction_status_slot = Arc::new(AtomicU64::default());
+        let max_complete_rewards_slot = Arc::new(AtomicU64::default());
+        let block_commitment_cache = Arc::new(RwLock::new(BlockCommitmentCache::default()));
+        let leader_schedule_cache = Arc::new(LeaderScheduleCache::new_from_bank(&bank));
+        let (replay_vote_sender, _replay_vote_receiver) = unbounded();
+        let (completed_data_sets_sender, _completed_data_sets_receiver) = unbounded();
+        let ignored_prioritization_fee_cache = Arc::new(PrioritizationFeeCache::new(0u64));
         let tvu = Tvu::new(
             vote_account,
             authorized_voter_keypairs,
@@ -1239,7 +1246,14 @@ impl Validator {
             },
             blockstore.clone(),
             ledger_signal_receiver,
-            &rpc_subscriptions,
+            &Arc::new(RpcSubscriptions::new_for_tests(
+                exit.clone(),
+                max_complete_transaction_status_slot,
+                max_complete_rewards_slot,
+                bank_forks.clone(),
+                block_commitment_cache.clone(),
+                OptimisticallyConfirmedBank::locked_from_bank_forks_root(&bank_forks),
+            )),
             &poh_recorder,
             tower,
             config.tower_storage.clone(),
@@ -1247,33 +1261,26 @@ impl Validator {
             exit.clone(),
             block_commitment_cache,
             config.turbine_disabled.clone(),
-            transaction_status_sender.clone(),
-            rewards_recorder_sender,
-            cache_block_meta_sender,
-            entry_notification_sender.clone(),
+            None,
+            None,
+            None,
+            None,
             vote_tracker.clone(),
             retransmit_slots_sender,
             gossip_verified_vote_hash_receiver,
             verified_vote_receiver,
             replay_vote_sender.clone(),
             completed_data_sets_sender,
-            bank_notification_sender.clone(),
+            None,
             duplicate_confirmed_slots_receiver,
-            TvuConfig {
-                max_ledger_shreds: config.max_ledger_shreds,
-                shred_version: node.info.shred_version(),
-                repair_validators: config.repair_validators.clone(),
-                repair_whitelist: config.repair_whitelist.clone(),
-                wait_for_vote_to_start_leader,
-                replay_slots_concurrently: config.replay_slots_concurrently,
-            },
-            &max_slots,
+            TvuConfig::default(),
+            &Arc::new(MaxSlots::default()),
             block_metadata_notifier,
             config.wait_to_vote_slot,
-            accounts_background_request_sender,
+            AbsRequestSender::default(),
             config.runtime_config.log_messages_bytes_limit,
-            &connection_cache,
-            &prioritization_fee_cache,
+            &Arc::new(ConnectionCache::new("connection_cache_test")),
+            &ignored_prioritization_fee_cache,
             banking_tracer.clone(),
             turbine_quic_endpoint_sender.clone(),
             turbine_quic_endpoint_receiver,
@@ -1295,7 +1302,7 @@ impl Validator {
             };
         }
 
-        let tpu = Tpu::new(
+        /*let tpu = Tpu::new(
             &cluster_info,
             &poh_recorder,
             entry_receiver,
@@ -1336,7 +1343,7 @@ impl Validator {
             &prioritization_fee_cache,
             config.block_production_method.clone(),
             config.generator_config.clone(),
-        );
+        );*/
 
         datapoint_info!(
             "validator-new",
@@ -1347,35 +1354,18 @@ impl Validator {
 
         *start_progress.write().unwrap() = ValidatorStartProgress::Running;
         Ok(Self {
-            stats_reporter_service,
             gossip_service,
             serve_repair_service,
-            json_rpc_service,
-            pubsub_service,
-            rpc_completed_slots_service,
-            optimistically_confirmed_bank_tracker,
-            transaction_status_service,
-            rewards_recorder_service,
-            cache_block_meta_service,
-            entry_notifier_service,
             system_monitor_service,
-            sample_performance_service,
             poh_timing_report_service,
-            snapshot_packager_service,
-            completed_data_sets_service,
-            tpu,
             tvu,
             poh_service,
             poh_recorder,
-            ip_echo_server,
             validator_exit: config.validator_exit.clone(),
             cluster_info,
             bank_forks,
             blockstore,
             geyser_plugin_service,
-            blockstore_metric_report_service,
-            accounts_background_service,
-            accounts_hash_verifier,
             turbine_quic_endpoint,
             turbine_quic_endpoint_runtime,
             turbine_quic_endpoint_join_handle,
@@ -1430,64 +1420,10 @@ impl Validator {
         self.poh_service.join().expect("poh_service");
         drop(self.poh_recorder);
 
-        if let Some(json_rpc_service) = self.json_rpc_service {
-            json_rpc_service.join().expect("rpc_service");
-        }
-
-        if let Some(pubsub_service) = self.pubsub_service {
-            pubsub_service.join().expect("pubsub_service");
-        }
-
-        self.rpc_completed_slots_service
-            .join()
-            .expect("rpc_completed_slots_service");
-
-        if let Some(optimistically_confirmed_bank_tracker) =
-            self.optimistically_confirmed_bank_tracker
-        {
-            optimistically_confirmed_bank_tracker
-                .join()
-                .expect("optimistically_confirmed_bank_tracker");
-        }
-
-        if let Some(transaction_status_service) = self.transaction_status_service {
-            transaction_status_service
-                .join()
-                .expect("transaction_status_service");
-        }
-
-        if let Some(rewards_recorder_service) = self.rewards_recorder_service {
-            rewards_recorder_service
-                .join()
-                .expect("rewards_recorder_service");
-        }
-
-        if let Some(cache_block_meta_service) = self.cache_block_meta_service {
-            cache_block_meta_service
-                .join()
-                .expect("cache_block_meta_service");
-        }
-
         if let Some(system_monitor_service) = self.system_monitor_service {
             system_monitor_service
                 .join()
                 .expect("system_monitor_service");
-        }
-
-        if let Some(sample_performance_service) = self.sample_performance_service {
-            sample_performance_service
-                .join()
-                .expect("sample_performance_service");
-        }
-
-        if let Some(entry_notifier_service) = self.entry_notifier_service {
-            entry_notifier_service
-                .join()
-                .expect("entry_notifier_service");
-        }
-
-        if let Some(s) = self.snapshot_packager_service {
-            s.join().expect("snapshot_packager_service");
         }
 
         self.gossip_service.join().expect("gossip_service");
@@ -1499,31 +1435,12 @@ impl Validator {
             .map(|runtime| runtime.block_on(self.repair_quic_endpoint_join_handle))
             .transpose()
             .unwrap();
-        self.stats_reporter_service
-            .join()
-            .expect("stats_reporter_service");
-        self.blockstore_metric_report_service
-            .join()
-            .expect("ledger_metric_report_service");
-        self.accounts_background_service
-            .join()
-            .expect("accounts_background_service");
-        self.accounts_hash_verifier
-            .join()
-            .expect("accounts_hash_verifier");
         solana_turbine::quic_endpoint::close_quic_endpoint(&self.turbine_quic_endpoint);
-        self.tpu.join().expect("tpu");
         self.tvu.join().expect("tvu");
         self.turbine_quic_endpoint_runtime
             .map(|runtime| runtime.block_on(self.turbine_quic_endpoint_join_handle))
             .transpose()
             .unwrap();
-        self.completed_data_sets_service
-            .join()
-            .expect("completed_data_sets_service");
-        if let Some(ip_echo_server) = self.ip_echo_server {
-            ip_echo_server.shutdown_background();
-        }
 
         if let Some(geyser_plugin_service) = self.geyser_plugin_service {
             geyser_plugin_service.join().expect("geyser_plugin_service");
@@ -1728,7 +1645,8 @@ fn load_blockstore(
     }
 
     if !config.no_poh_speed_test {
-        check_poh_speed(&genesis_config, None)?;
+        info!("Skipping poh speed check");
+        //check_poh_speed(&genesis_config, None)?;
     }
 
     let BlockstoreSignals {
@@ -1740,8 +1658,6 @@ fn load_blockstore(
         .map_err(|err| format!("Failed to open Blockstore: {err:?}"))?;
 
     blockstore.shred_timing_point_sender = poh_timing_point_sender;
-    // following boot sequence (esp BankForks) could set root. so stash the original value
-    // of blockstore root away here as soon as possible.
     let original_blockstore_root = blockstore.max_root();
 
     let blockstore = Arc::new(blockstore);
@@ -2616,7 +2532,10 @@ mod tests {
         );
 
         let (genesis_config, _mint_keypair) = create_genesis_config(1);
-        let bank_forks = BankForks::new_rw_arc(Bank::new_for_tests(&genesis_config));
+        let bank = Bank::new_for_tests(&genesis_config);
+
+        let bank_forks = BankForks::new_rw_arc(bank);
+        let bank = Arc::new(bank);
         let mut config = ValidatorConfig::default_for_test();
         let rpc_override_health_check = Arc::new(AtomicBool::new(false));
         let start_progress = Arc::new(RwLock::new(ValidatorStartProgress::default()));

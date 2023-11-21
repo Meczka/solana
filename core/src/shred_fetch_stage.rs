@@ -289,13 +289,23 @@ fn receive_quic_datagrams(
     recycler: PacketBatchRecycler,
     exit: Arc<AtomicBool>,
 ) {
+    println!("Receiving quic datagrams");
+    info!("Receiving quic datagrams");
     const RECV_TIMEOUT: Duration = Duration::from_secs(1);
     while !exit.load(Ordering::Relaxed) {
+        info!("Looping quic datagrams");
         let entry = match turbine_quic_endpoint_receiver.recv_timeout(RECV_TIMEOUT) {
             Ok(entry) => entry,
-            Err(RecvTimeoutError::Timeout) => continue,
-            Err(RecvTimeoutError::Disconnected) => return,
+            Err(RecvTimeoutError::Timeout) => {
+                info!("Datagram timeout");
+                continue;
+            }
+            Err(RecvTimeoutError::Disconnected) => {
+                info!("Datagram disconnected");
+                return;
+            }
         };
+        info!("Got datagram");
         let mut packet_batch =
             PacketBatch::new_with_recycler(&recycler, PACKETS_PER_BATCH, "receive_quic_datagrams");
         unsafe {
@@ -319,6 +329,7 @@ fn receive_quic_datagrams(
                 packet.buffer_mut()[..bytes.len()].copy_from_slice(&bytes);
             })
             .count();
+        info!("Datagram size {:?}", size);
         if size > 0 {
             packet_batch.truncate(size);
             if sender.send(packet_batch).is_err() {
@@ -326,6 +337,7 @@ fn receive_quic_datagrams(
             }
         }
     }
+    info!("Exiting quic receiver")
 }
 
 pub(crate) fn receive_repair_quic_packets(

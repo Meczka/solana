@@ -1147,6 +1147,7 @@ pub fn confirm_slot(
     log_messages_bytes_limit: Option<usize>,
     prioritization_fee_cache: &PrioritizationFeeCache,
 ) -> result::Result<(), BlockstoreProcessorError> {
+    info!("Confirming slot");
     let slot = bank.slot();
 
     let slot_entries_load_result = {
