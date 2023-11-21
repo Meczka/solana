@@ -1833,7 +1833,7 @@ pub fn main() {
 
     let should_check_duplicate_instance = true;
     if !cluster_entrypoints.is_empty() {
-        bootstrap::rpc_bootstrap(
+        /*bootstrap::rpc_bootstrap(
             &node,
             &identity_keypair,
             &ledger_path,
@@ -1852,7 +1852,8 @@ pub fn main() {
             minimal_snapshot_download_speed,
             maximum_snapshot_download_abort,
             socket_addr_space,
-        );
+        );*/
+        info!("Skipping bootstrap process");
         *start_progress.write().unwrap() = ValidatorStartProgress::Initializing;
     }
 
