@@ -601,7 +601,7 @@ where
         capitalizations,
         bank_fields.incremental_snapshot_persistence.as_ref(),
     )?;*/
-    let accoutns_db = AccountsDb::default_for_tests();
+    let accounts_db = AccountsDb::default_for_tests();
     let bank_rc = BankRc::new(Accounts::new_empty(accounts_db), bank_fields.slot);
     let runtime_config = Arc::new(runtime_config.clone());
 
