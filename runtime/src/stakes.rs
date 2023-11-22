@@ -1,5 +1,7 @@
 //! Stakes serve as a cache of stake and vote accounts to derive
 //! node stakes
+
+use log::info;
 use {
     crate::{
         stake_account,
@@ -218,6 +220,7 @@ impl Stakes<StakeAccount> {
     where
         F: Fn(&Pubkey) -> Option<AccountSharedData>,
     {
+        info!("Stake delegations size {}", stakes.stake_delegations.len());
         let stake_delegations = stakes.stake_delegations.iter().map(|(pubkey, delegation)| {
             let stake_account = match get_account(pubkey) {
                 None => AccountSharedData::default(),
