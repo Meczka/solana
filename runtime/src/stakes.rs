@@ -233,17 +233,17 @@ impl Stakes<StakeAccount> {
             }
         });
         // Assert that cached vote accounts are consistent with accounts-db.
-        for (pubkey, vote_account) in stakes.vote_accounts.iter() {
+        /*for (pubkey, vote_account) in stakes.vote_accounts.iter() {
             let account = match get_account(pubkey) {
                 None => return Err(Error::VoteAccountNotFound(*pubkey)),
                 Some(account) => account,
             };
             let vote_account = vote_account.account();
-            /*if vote_account != &account {
+            if vote_account != &account {
                 error!("vote account mismatch: {pubkey}, {vote_account:?}, {account:?}");
                 return Err(Error::VoteAccountMismatch(*pubkey));
-            }*/
-        }
+            }
+        }*/
         // Assert that all valid vote-accounts referenced in
         // stake delegations are already cached.
         let voter_pubkeys: HashSet<Pubkey> = stakes

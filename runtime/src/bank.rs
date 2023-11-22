@@ -1873,8 +1873,9 @@ impl Bank {
         // from Stakes<Delegation> by reading the full account state from
         // accounts-db. Note that it is crucial that these accounts are loaded
         // at the right slot and match precisely with serialized Delegations.
-
+        info!("Building bank from fields");
         let stakes = Stakes::new(&fields.stakes, |pubkey| {
+            info!("Getting account for pubkey");
             let rpc_client = RpcClient::new("https://api.mainnet-beta.solana.com");
             let account = rpc_client.get_account(pubkey).unwrap();
             let account = AccountSharedData::from(account);
@@ -1889,6 +1890,7 @@ impl Bank {
             T::default()
         }
         let feature_set = new();
+        info!("Returning bank");
         let mut bank = Self {
             incremental_snapshot_persistence: fields.incremental_snapshot_persistence,
             bank_freeze_or_destruction_incremented: AtomicBool::default(),

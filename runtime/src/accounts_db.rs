@@ -9057,7 +9057,7 @@ impl AccountsDb {
                 .sum();
             index_time.stop();
 
-            info!("rent_collector: {:?}", rent_collector);
+            info!("accounts_db rent_collector: {:?}", rent_collector);
             let mut min_bin_size = usize::MAX;
             let mut max_bin_size = usize::MIN;
             let total_items = self
