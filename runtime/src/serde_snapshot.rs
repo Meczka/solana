@@ -615,7 +615,7 @@ where
         debug_keys,
         additional_builtins,
         debug_do_not_add_builtins,
-        0,
+        reconstructed_accounts_db_info.accounts_data_len,
     );
 
     info!("rent_collector: {:?}", bank.rent_collector());
