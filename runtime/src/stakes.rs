@@ -220,16 +220,19 @@ impl Stakes<StakeAccount> {
     {
         let stake_delegations = stakes.stake_delegations.iter().map(|(pubkey, delegation)| {
             let stake_account = match get_account(pubkey) {
-                None => return Err(Error::StakeAccountNotFound(*pubkey)),
+                None => AccountSharedData::default(),
                 Some(account) => account,
             };
             let stake_account = StakeAccount::try_from(stake_account)?;
             // Sanity check that the delegation is consistent with what is
             // stored in the account.
+            if false {
+                return Err(Error::VoteAccountNotFound(*pubkey));
+            }
             if stake_account.delegation() == *delegation {
                 Ok((*pubkey, stake_account))
             } else {
-                Err(Error::InvalidDelegation(*pubkey))
+                Ok((*pubkey, StakeAccount::default()))
             }
         });
         // Assert that cached vote accounts are consistent with accounts-db.

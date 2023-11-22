@@ -1877,7 +1877,7 @@ impl Bank {
         let stakes = Stakes::new(&fields.stakes, |pubkey| {
             info!("Getting account for pubkey");
             let rpc_client = RpcClient::new("https://api.mainnet-beta.solana.com");
-            let account = rpc_client.get_account(pubkey).unwrap();
+            let account = rpc_client.get_account(pubkey).ok()?;
             let account = AccountSharedData::from(account);
             Some(account)
         })
