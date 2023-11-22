@@ -6597,6 +6597,7 @@ dependencies = [
  "solana-address-lookup-table-program",
  "solana-bpf-loader-program",
  "solana-bucket-map",
+ "solana-client",
  "solana-compute-budget-program",
  "solana-config-program",
  "solana-frozen-abi",
