@@ -226,7 +226,10 @@ impl Stakes<StakeAccount> {
                 None => AccountSharedData::default(),
                 Some(account) => account,
             };
-            let stake_account = StakeAccount::try_from(stake_account)?;
+            let stake_account = match StakeAccount::try_from(stake_account) {
+                Ok(n) => n,
+                Err(_) => StakeAccount::default(),
+            };
             // Sanity check that the delegation is consistent with what is
             // stored in the account.
             if false {
