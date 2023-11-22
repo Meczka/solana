@@ -1874,17 +1874,19 @@ impl Bank {
         // accounts-db. Note that it is crucial that these accounts are loaded
         // at the right slot and match precisely with serialized Delegations.
         info!("Building bank from fields");
-        let stakes = Stakes::new(&fields.stakes, |pubkey| {
+        /* let stakes = Stakes::new(&fields.stakes, |pubkey| {
             info!("Getting account for pubkey");
-            let rpc_client = RpcClient::new("https://api.mainnet-beta.solana.com");
+            let (account, _slot) = bank_rc.accounts.load_with_fixed_root(&ancestors, pubkey)?;
+            /*let rpc_client = RpcClient::new("https://api.mainnet-beta.solana.com");
             let account = rpc_client.get_account(pubkey).ok()?;
-            let account = AccountSharedData::from(account);
+            let account = AccountSharedData::from(account);*/
             Some(account)
         })
         .expect(
             "Stakes cache is inconsistent with accounts-db. This can indicate \
             a corrupted snapshot or bugs in cached accounts or accounts-db.",
-        );
+        );*/
+        let stakes = Stakes::default();
         let stakes_accounts_load_duration = now.elapsed();
         fn new<T: Default>() -> T {
             T::default()
