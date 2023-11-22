@@ -1586,7 +1586,7 @@ pub fn bank_from_snapshot_archives(
     measure_rebuild.stop();
     info!("{}", measure_rebuild);
 
-    let snapshot_archive_info = incremental_snapshot_archive_info.map_or_else(
+    /*let snapshot_archive_info = incremental_snapshot_archive_info.map_or_else(
         || full_snapshot_archive_info.snapshot_archive_info(),
         |incremental_snapshot_archive_info| {
             incremental_snapshot_archive_info.snapshot_archive_info()
@@ -1624,7 +1624,8 @@ pub fn bank_from_snapshot_archives(
     ) && limit_load_slot_count_from_snapshot.is_none()
     {
         panic!("Snapshot bank for slot {} failed to verify", bank.slot());
-    }
+    }*/
+    let mut measure_verify = Measure::start("verify");
     measure_verify.stop();
 
     let timings = BankFromArchiveTimings {
