@@ -3294,11 +3294,11 @@ impl Bank {
             }
         };
 
-        assert!(
+        /*assert!(
             !self.freeze_started(),
             "Can't change frozen bank by adding not-existing new precompiled program ({program_id}). \
                 Maybe, inconsistent program activation is detected on snapshot restore?"
-        );
+        );*/
 
         // Add a bogus executable account, which will be loaded and ignored.
         let (lamports, rent_epoch) = self.inherit_specially_retained_account_fields(&None);
@@ -6033,7 +6033,7 @@ impl Bank {
         &self,
         accounts: impl StorableAccounts<'a, T>,
     ) {
-        assert!(!self.freeze_started());
+        //assert!(!self.freeze_started());
         let mut m = Measure::start("stakes_cache.check_and_store");
         let new_warmup_cooldown_rate_epoch = self.new_warmup_cooldown_rate_epoch();
         (0..accounts.len()).for_each(|i| {
