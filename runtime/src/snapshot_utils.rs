@@ -2718,7 +2718,7 @@ fn rebuild_bank_from_unarchived_snapshots(
             }?,
         )
     })?;
-
+    info!("Accounts db deserialized");
     // The status cache is rebuilt from the latest snapshot.  So, if there's an incremental
     // snapshot, use that.  Otherwise use the full snapshot.
     let status_cache_path = incremental_snapshot_unpacked_snapshots_dir_and_version
@@ -2735,10 +2735,11 @@ fn rebuild_bank_from_unarchived_snapshots(
             },
         )
         .join(SNAPSHOT_STATUS_CACHE_FILENAME);
+    info!("Getting slot deltas");
     let slot_deltas = deserialize_status_cache(&status_cache_path)?;
-
+    info!("Got slot deltas");
     verify_slot_deltas(slot_deltas.as_slice(), &bank)?;
-
+    info!("Verified slot deltas");
     bank.status_cache.write().unwrap().append(&slot_deltas);
 
     info!("Rebuilt bank for slot: {}", bank.slot());
