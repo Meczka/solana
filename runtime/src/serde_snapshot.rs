@@ -585,7 +585,7 @@ where
             .map(|bank_fields| bank_fields.capitalization),
     );
     let bank_fields = bank_fields.collapse_into();
-    /*let (accounts_db, reconstructed_accounts_db_info) = reconstruct_accountsdb_from_fields(
+    let (accounts_db, reconstructed_accounts_db_info) = reconstruct_accountsdb_from_fields(
         snapshot_accounts_db_fields,
         account_paths,
         storage_and_next_append_vec_id,
@@ -600,8 +600,8 @@ where
         bank_fields.epoch_accounts_hash,
         capitalizations,
         bank_fields.incremental_snapshot_persistence.as_ref(),
-    )?;*/
-    let accounts_db = AccountsDb::default_for_tests();
+    )?;
+    //let accounts_db = AccountsDb::default_for_tests();
     let bank_rc = BankRc::new(Accounts::new_empty(accounts_db), bank_fields.slot);
     let runtime_config = Arc::new(runtime_config.clone());
 
