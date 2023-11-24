@@ -2636,10 +2636,10 @@ impl ReplayStage {
             replay_result: None,
         };
         let my_pubkey = &my_pubkey.clone();
-        info!("Replay active bank: slot {}", bank_slot);
+        info!("Replay active bank: slot {} target", bank_slot);
         if progress.get(&bank_slot).map(|p| p.is_dead).unwrap_or(false) {
             // If the fork was marked as dead, don't replay it
-            debug!("bank_slot {:?} is marked dead", bank_slot);
+            info!("bank_slot {:?} is marked dead", bank_slot);
             replay_result.is_slot_dead = true;
         } else {
             let bank = &bank_forks.read().unwrap().get(bank_slot).unwrap();
@@ -2666,8 +2666,9 @@ impl ReplayStage {
                     num_dropped_blocks_on_fork,
                 )
             });
-
+            info!("Before conditional");
             if bank.collector_id() != my_pubkey {
+                info!("Before reply blockstore into bank");
                 let mut replay_blockstore_time = Measure::start("replay_blockstore_into_bank");
                 let blockstore_result = Self::replay_blockstore_into_bank(
                     bank,
