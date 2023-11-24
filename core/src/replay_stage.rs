@@ -2637,7 +2637,8 @@ impl ReplayStage {
         };
         let my_pubkey = &my_pubkey.clone();
         info!("Replay active bank: slot {} target", bank_slot);
-        if progress.get(&bank_slot).map(|p| p.is_dead).unwrap_or(false) {
+        //if progress.get(&bank_slot).map(|p| p.is_dead).unwrap_or(false) {
+        if false {
             // If the fork was marked as dead, don't replay it
             info!("bank_slot {:?} is marked dead", bank_slot);
             replay_result.is_slot_dead = true;
