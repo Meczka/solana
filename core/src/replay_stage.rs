@@ -2537,7 +2537,7 @@ impl ReplayStage {
                         replay_result: None,
                     };
                     let my_pubkey = &my_pubkey.clone();
-                    trace!(
+                    info!(
                         "Replay active bank: slot {}, thread_idx {}",
                         bank_slot,
                         PAR_THREAD_POOL.current_thread_index().unwrap_or_default()
@@ -2912,7 +2912,7 @@ impl ReplayStage {
             num_active_banks,
             active_bank_slots
         );
-        info!("Bank root: {}", bank_forks.read().unwrap().root());
+        //info!("Bank root: {}", bank_forks.read().unwrap().root());
         if num_active_banks > 0 {
             let replay_result_vec = if num_active_banks > 1 && replay_slots_concurrently {
                 Self::replay_active_banks_concurrently(
