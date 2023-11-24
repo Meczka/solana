@@ -1654,7 +1654,7 @@ impl Blockstore {
             self.send_slot_full_timing(slot);
         }
 
-        trace!("inserted shred into slot {:?} and index {:?}", slot, index);
+        info!("inserted shred into slot {:?} and index {:?}", slot, index);
 
         Ok(newly_completed_data_sets)
     }
