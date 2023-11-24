@@ -1091,7 +1091,13 @@ pub fn confirm_slot(
         load_result
     }?;
 
-    confirm_slot_entries(
+    let (entries, num_shreds, slot_full) = slot_entries_load_result;
+    let tx_count = entries
+        .iter()
+        .map(|entry| entry.transactions.len())
+        .sum::<usize>();
+    info!("Entry containts {} txns", tx_count);
+    /*confirm_slot_entries(
         bank,
         slot_entries_load_result,
         timing,
@@ -1103,7 +1109,8 @@ pub fn confirm_slot(
         recyclers,
         log_messages_bytes_limit,
         prioritization_fee_cache,
-    )
+    )*/
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1163,13 +1170,9 @@ fn confirm_slot_entries(
             num_txs
         })
         .sum::<usize>();
-    trace!(
+    info!(
         "Fetched entries for slot {}, num_entries: {}, num_shreds: {}, num_txs: {}, slot_full: {}",
-        slot,
-        num_entries,
-        num_shreds,
-        num_txs,
-        slot_full,
+        slot, num_entries, num_shreds, num_txs, slot_full,
     );
 
     if !skip_verification {
