@@ -2636,7 +2636,7 @@ impl ReplayStage {
             replay_result: None,
         };
         let my_pubkey = &my_pubkey.clone();
-        trace!("Replay active bank: slot {}", bank_slot);
+        info!("Replay active bank: slot {}", bank_slot);
         if progress.get(&bank_slot).map(|p| p.is_dead).unwrap_or(false) {
             // If the fork was marked as dead, don't replay it
             debug!("bank_slot {:?} is marked dead", bank_slot);
@@ -2913,6 +2913,7 @@ impl ReplayStage {
             active_bank_slots
         );
         //info!("Bank root: {}", bank_forks.read().unwrap().root());
+        info!("num active banks {}", num_active_banks);
         if num_active_banks > 0 {
             let replay_result_vec = if num_active_banks > 1 && replay_slots_concurrently {
                 Self::replay_active_banks_concurrently(
