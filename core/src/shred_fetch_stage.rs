@@ -59,6 +59,7 @@ impl ShredFetchStage {
                 let root_bank = {
                     let bank_forks_r = bank_forks.read().unwrap();
                     last_slot = bank_forks_r.highest_slot();
+                    info!("Last slot shred phase {}", last_slot);
                     bank_forks_r.root_bank()
                 };
                 last_root = root_bank.slot();

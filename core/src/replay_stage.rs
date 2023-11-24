@@ -2914,6 +2914,7 @@ impl ReplayStage {
         );
         //info!("Bank root: {}", bank_forks.read().unwrap().root());
         info!("num active banks {}", num_active_banks);
+        info!("highest slot {}", bank_forks.read().unwrap().highest_slot());
         if num_active_banks > 0 {
             let replay_result_vec = if num_active_banks > 1 && replay_slots_concurrently {
                 Self::replay_active_banks_concurrently(

@@ -920,16 +920,19 @@ pub fn should_discard_shred(
     let shred_variant = match layout::get_shred_variant(shred) {
         Ok(shred_variant) => shred_variant,
         Err(_) => {
+            info!("Got bad shred type");
             stats.bad_shred_type += 1;
             return true;
         }
     };
     let slot = match layout::get_slot(shred) {
         Some(slot) => {
+            info!("Shred slot {}", slot);
             if slot > max_slot {
                 stats.slot_out_of_range += 1;
                 return true;
             }
+
             slot
         }
         None => {
