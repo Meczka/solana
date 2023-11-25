@@ -675,7 +675,7 @@ impl Validator {
         let cache_block_meta_sender = None;
         let starting_snapshot_hashes = None;
 
-        /*let (
+        let (
             genesis_config,
             bank_forks,
             blockstore,
@@ -707,7 +707,7 @@ impl Validator {
             transaction_notifier,
             entry_notifier,
             Some(poh_timing_point_sender.clone()),
-        )?;*/
+        )?;
 
         node.info.set_wallclock(timestamp());
         node.info.set_shred_version(compute_shred_version(
