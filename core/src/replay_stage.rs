@@ -595,7 +595,10 @@ impl ReplayStage {
                 match entries {
                     Ok(entries) => {
                         let tx_count: usize = entries.iter().map(|e| e.transactions.len()).sum();
-                        info!("Found {tx_count} txns in entry loop");
+                        info!(
+                            "Found {tx_count} txns in entry loop highest_slot: {}",
+                            highest_slot
+                        );
                     }
                     Err(e) => {
                         info!("Blockstore error {:?}", e);
