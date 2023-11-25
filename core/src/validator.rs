@@ -725,7 +725,7 @@ impl Validator {
 
         Self::print_node_info(&node);
 
-        if let Some(expected_shred_version) = config.expected_shred_version {
+        /*if let Some(expected_shred_version) = config.expected_shred_version {
             if expected_shred_version != node.info.shred_version() {
                 return Err(format!(
                     "shred version mismatch: expected {} found: {}",
@@ -733,7 +733,7 @@ impl Validator {
                     node.info.shred_version(),
                 ));
             }
-        }
+        }*/
 
         let mut cluster_info = ClusterInfo::new(
             node.info.clone(),
