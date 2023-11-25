@@ -597,14 +597,14 @@ impl ReplayStage {
 
                 let mut generate_new_bank_forks_time =
                     Measure::start("generate_new_bank_forks_time");
-                Self::generate_new_bank_forks(
+                /*Self::generate_new_bank_forks(
                     &blockstore,
                     &bank_forks,
                     &leader_schedule_cache,
                     &rpc_subscriptions,
                     &mut progress,
                     &mut replay_timing,
-                );
+                );*/
                 generate_new_bank_forks_time.stop();
 
                 let mut tpu_has_bank = poh_recorder.read().unwrap().has_bank();
