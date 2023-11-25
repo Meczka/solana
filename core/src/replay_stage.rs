@@ -1,5 +1,7 @@
 //! The `replay_stage` replays transactions broadcast by the leader.
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use {
     crate::{
         ancestor_hashes_service::AncestorHashesReplayUpdateSender,
@@ -594,6 +596,25 @@ impl ReplayStage {
                 let entries = blockstore.get_slot_entries(highest_slot, 0);
                 match entries {
                     Ok(entries) => {
+                        entries.iter().for_each(|e| {
+                            for transaction in &e.transactions {
+                                if let Some(tx) = transaction.clone().into_legacy_transaction() {
+                                    for acc_key in tx.message.account_keys {
+                                        if acc_key.to_string()
+                                            == "2xkh9tdCQjY3NgL2WCPoxYwu4FXgQGtfPwKpbGExVcbt"
+                                        {
+                                            info!(
+                                                "Got desired tx {}",
+                                                SystemTime::now()
+                                                    .duration_since(UNIX_EPOCH)
+                                                    .unwrap()
+                                                    .as_millis()
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        });
                         let tx_count: usize = entries.iter().map(|e| e.transactions.len()).sum();
                         info!(
                             "Found {tx_count} txns in entry loop highest_slot: {}",
@@ -604,7 +625,7 @@ impl ReplayStage {
                         info!("Blockstore error {:?}", e);
                     }
                 }
-                thread::sleep(Duration::from_millis(100));
+                thread::sleep(Duration::from_millis(1));
                 continue;
                 // Stop getting entries if we get exit signal
                 if exit.load(Ordering::Relaxed) {
