@@ -592,7 +592,11 @@ impl ReplayStage {
             );
 
             loop {
-                let highest_slot: Slot = blockstore.highest_slot().unwrap().unwrap();
+                let highest_slot = blockstore.highest_slot();
+                if highest_slot.unwrap().is_none() {
+                    continue;
+                }
+                let highest_slot = blockstore.highest_slot().unwrap().unwrap();
                 let entries = blockstore.get_slot_entries(highest_slot, 0);
                 match entries {
                     Ok(entries) => {
