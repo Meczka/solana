@@ -93,10 +93,10 @@ fn run_shred_sigverify<const K: usize>(
 ) -> Result<(), Error> {
     const RECV_TIMEOUT: Duration = Duration::from_secs(1);
     let packets = shred_fetch_receiver.recv_timeout(RECV_TIMEOUT)?;
-    verified_sender.send(packets)?;
     let mut packets: Vec<_> = std::iter::once(packets)
         .chain(shred_fetch_receiver.try_iter())
         .collect();
+    verified_sender.send(packets.clone())?;
     let now = Instant::now();
     stats.num_iters += 1;
     stats.num_packets += packets.iter().map(PacketBatch::len).sum::<usize>();
