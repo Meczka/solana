@@ -657,23 +657,7 @@ impl Validator {
         /*let genesis_config =
             open_genesis_config(ledger_path, config.max_genesis_archive_unpacked_size);
         let ledger_path_2 = get_tmp_ledger_path_auto_delete!();
-        let blockstore = Arc::new(Blockstore::open(ledger_path_2.path()).unwrap());
-        let original_blockstore_root = 0;
-        let (_, ledger_signal_receiver) = unbounded();
-        let (_, completed_slots_receiver) = unbounded();
-        let (_, pruned_banks_receiver) = unbounded();
-        let leader_schedule_cache = LeaderScheduleCache::default();
-        let bank = Bank::new_for_tests(&genesis_config);
-        let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
-        let transaction_status_sender = None;
-        let transaction_status_service = None;
-        let max_complete_rewards_slot = Arc::new(AtomicU64::default());
-        let max_complete_transaction_status_slot = Arc::new(AtomicU64::default());
-        let rewards_recorder_service = None;
-        let rewards_recorder_sender = None;
-        let cache_block_meta_service = None;
-        let cache_block_meta_sender = None;
-        let starting_snapshot_hashes = None;*/
+        let blockstore = Arc::new(Blockstore::open(ledger_path_2.path()).unwrap());*/
 
         let (
             genesis_config,
@@ -708,6 +692,22 @@ impl Validator {
             entry_notifier,
             Some(poh_timing_point_sender.clone()),
         )?;
+        let original_blockstore_root = 0;
+        let (_, ledger_signal_receiver) = unbounded();
+        let (_, completed_slots_receiver) = unbounded();
+        let (_, pruned_banks_receiver) = unbounded();
+        let leader_schedule_cache = LeaderScheduleCache::default();
+        let bank = Bank::new_for_tests(&genesis_config);
+        let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
+        let transaction_status_sender = None;
+        let transaction_status_service = None;
+        let max_complete_rewards_slot = Arc::new(AtomicU64::default());
+        let max_complete_transaction_status_slot = Arc::new(AtomicU64::default());
+        let rewards_recorder_service = None;
+        let rewards_recorder_sender = None;
+        let cache_block_meta_service = None;
+        let cache_block_meta_sender = None;
+        let starting_snapshot_hashes = None;
 
         node.info.set_wallclock(timestamp());
         node.info.set_shred_version(compute_shred_version(
