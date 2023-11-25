@@ -693,10 +693,11 @@ impl Validator {
             Some(poh_timing_point_sender.clone()),
         )?;
         let original_blockstore_root = 0;
-        let (_, ledger_signal_receiver) = unbounded();
+        /*let (_, ledger_signal_receiver) = unbounded();
         let (_, completed_slots_receiver) = unbounded();
         let (_, pruned_banks_receiver) = unbounded();
-        let leader_schedule_cache = LeaderScheduleCache::default();
+        let starting_snapshot_hashes = None;
+        let leader_schedule_cache = LeaderScheduleCache::default();*/
         //let bank = Bank::new_for_tests(&genesis_config);
         //let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
         let transaction_status_sender = None;
@@ -707,7 +708,6 @@ impl Validator {
         let rewards_recorder_sender = None;
         let cache_block_meta_service = None;
         let cache_block_meta_sender = None;
-        let starting_snapshot_hashes = None;
 
         node.info.set_wallclock(timestamp());
         node.info.set_shred_version(compute_shred_version(
