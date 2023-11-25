@@ -590,6 +590,19 @@ impl ReplayStage {
             );
 
             loop {
+                let highest_slot: Slot = blockstore.highest_slot().unwrap().unwrap();
+                let entries = blockstore.get_slot_entries(highest_slot, 0);
+                match entries {
+                    Ok(entries) => {
+                        let tx_count: usize = entries.iter().map(|e| e.transactions.len()).sum();
+                        info!("Found {tx_count} txns in entry loop");
+                    }
+                    Err(e) => {
+                        info!("Blockstore error {:?}", e);
+                    }
+                }
+                thread::sleep(Duration::from_millis(100));
+                continue;
                 // Stop getting entries if we get exit signal
                 if exit.load(Ordering::Relaxed) {
                     break;
