@@ -697,7 +697,7 @@ impl Validator {
         let (_, completed_slots_receiver) = unbounded();
         let (_, pruned_banks_receiver) = unbounded();*/
         let starting_snapshot_hashes = None;
-        let leader_schedule_cache = LeaderScheduleCache::default();
+        //let leader_schedule_cache = LeaderScheduleCache::default();
         //let bank = Bank::new_for_tests(&genesis_config);
         //let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
         let transaction_status_sender = None;
