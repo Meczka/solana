@@ -1,6 +1,10 @@
 //! The `validator` module hosts all the validator microservices.
 
+use solana_ledger::{get_tmp_ledger_path_auto_delete, leader_schedule_cache};
 pub use solana_perf::report_target_features;
+use solana_rpc::transaction_status_service;
+
+use crate::{cache_block_meta_service, rewards_recorder_service};
 use {
     crate::{
         accounts_hash_verifier::{AccountsHashFaultInjector, AccountsHashVerifier},
@@ -650,7 +654,28 @@ impl Validator {
         let poh_timing_report_service =
             PohTimingReportService::new(poh_timing_point_receiver, &exit);
 
-        let (
+        let genesis_config =
+            open_genesis_config(ledger_path, config.max_genesis_archive_unpacked_size);
+        let ledger_path_2 = get_tmp_ledger_path_auto_delete!();
+        let blockstore = Arc::new(Blockstore::open(ledger_path_2.path()).unwrap());
+        let original_blockstore_root = 0;
+        let (_, ledger_signal_receiver) = unbounded();
+        let (_, completed_slots_receiver) = unbounded();
+        let (_, pruned_banks_receiver) = unbounded();
+        let leader_schedule_cache = LeaderScheduleCache::default();
+        let bank = Bank::new_for_tests(&genesis_config);
+        let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
+        let transaction_status_sender = None;
+        let transaction_status_service = None;
+        let max_complete_rewards_slot = Arc::new(AtomicU64::default());
+        let max_complete_transaction_status_slot = Arc::new(AtomicU64::default());
+        let rewards_recorder_service = None;
+        let rewards_recorder_sender = None;
+        let cache_block_meta_service = None;
+        let cache_block_meta_sender = None;
+        let starting_snapshot_hashes = None;
+
+        /*let (
             genesis_config,
             bank_forks,
             blockstore,
@@ -682,7 +707,7 @@ impl Validator {
             transaction_notifier,
             entry_notifier,
             Some(poh_timing_point_sender.clone()),
-        )?;
+        )?;*/
 
         node.info.set_wallclock(timestamp());
         node.info.set_shred_version(compute_shred_version(
@@ -793,7 +818,7 @@ impl Validator {
         );
 
         let leader_schedule_cache = Arc::new(leader_schedule_cache);
-        let entry_notification_sender = entry_notifier_service
+        /*let entry_notification_sender = entry_notifier_service
             .as_ref()
             .map(|service| service.sender());
         let mut process_blockstore = ProcessBlockStore::new(
@@ -824,7 +849,7 @@ impl Validator {
 
         if config.process_ledger_before_services {
             process_blockstore.process()?;
-        }
+        }*/
         *start_progress.write().unwrap() = ValidatorStartProgress::StartingServices;
 
         let sample_performance_service =
@@ -925,89 +950,8 @@ impl Validator {
 
         let rpc_override_health_check =
             Arc::new(AtomicBool::new(config.rpc_config.disable_health_check));
-        let (
-            json_rpc_service,
-            pubsub_service,
-            optimistically_confirmed_bank_tracker,
-            bank_notification_sender,
-        ) = if let Some((rpc_addr, rpc_pubsub_addr)) = config.rpc_addrs {
-            assert_eq!(
-                node.info
-                    .rpc()
-                    .map(|addr| socket_addr_space.check(&addr))
-                    .ok(),
-                node.info
-                    .rpc_pubsub()
-                    .map(|addr| socket_addr_space.check(&addr))
-                    .ok()
-            );
-            let (bank_notification_sender, bank_notification_receiver) = unbounded();
-            let confirmed_bank_subscribers = if !bank_notification_senders.is_empty() {
-                Some(Arc::new(RwLock::new(bank_notification_senders)))
-            } else {
-                None
-            };
-
-            let json_rpc_service = JsonRpcService::new(
-                rpc_addr,
-                config.rpc_config.clone(),
-                Some(config.snapshot_config.clone()),
-                bank_forks.clone(),
-                block_commitment_cache.clone(),
-                blockstore.clone(),
-                cluster_info.clone(),
-                Some(poh_recorder.clone()),
-                genesis_config.hash(),
-                ledger_path,
-                config.validator_exit.clone(),
-                exit.clone(),
-                rpc_override_health_check.clone(),
-                startup_verification_complete,
-                optimistically_confirmed_bank.clone(),
-                config.send_transaction_service_config.clone(),
-                max_slots.clone(),
-                leader_schedule_cache.clone(),
-                connection_cache.clone(),
-                max_complete_transaction_status_slot,
-                max_complete_rewards_slot,
-                prioritization_fee_cache.clone(),
-            )?;
-
-            (
-                Some(json_rpc_service),
-                if !config.rpc_config.full_api {
-                    None
-                } else {
-                    let (trigger, pubsub_service) = PubSubService::new(
-                        config.pubsub_config.clone(),
-                        &rpc_subscriptions,
-                        rpc_pubsub_addr,
-                    );
-                    config
-                        .validator_exit
-                        .write()
-                        .unwrap()
-                        .register_exit(Box::new(move || trigger.cancel()));
-
-                    Some(pubsub_service)
-                },
-                Some(OptimisticallyConfirmedBankTracker::new(
-                    bank_notification_receiver,
-                    &exit,
-                    bank_forks.clone(),
-                    optimistically_confirmed_bank,
-                    rpc_subscriptions.clone(),
-                    confirmed_bank_subscribers,
-                    prioritization_fee_cache.clone(),
-                )),
-                Some(BankNotificationSenderConfig {
-                    sender: bank_notification_sender,
-                    should_send_parents: geyser_plugin_service.is_some(),
-                }),
-            )
-        } else {
-            (None, None, None, None)
-        };
+        let (pubsub_service, optimistically_confirmed_bank_tracker, bank_notification_sender) =
+            (None, None, None);
 
         if config.halt_at_slot.is_some() {
             // Simulate a confirmed root to avoid RPC errors with CommitmentConfig::finalized() and
@@ -1066,7 +1010,7 @@ impl Validator {
 
         let waited_for_supermajority = match wait_for_supermajority(
             config,
-            Some(&mut process_blockstore),
+            None,
             &bank_forks,
             &cluster_info,
             rpc_override_health_check,
@@ -1126,9 +1070,9 @@ impl Validator {
             info!("Disabled banking tracer");
         }
 
-        let entry_notification_sender = entry_notifier_service
-            .as_ref()
-            .map(|service| service.sender_cloned());
+        /*let entry_notification_sender = entry_notifier_service
+        .as_ref()
+        .map(|service| service.sender_cloned());*/
         let (replay_vote_sender, replay_vote_receiver) = unbounded();
         let tvu = Tvu::new(
             vote_account,
@@ -1146,7 +1090,7 @@ impl Validator {
             ledger_signal_receiver,
             &rpc_subscriptions,
             &poh_recorder,
-            Some(process_blockstore),
+            None,
             config.tower_storage.clone(),
             &leader_schedule_cache,
             &exit,
@@ -1155,7 +1099,7 @@ impl Validator {
             transaction_status_sender.clone(),
             rewards_recorder_sender,
             cache_block_meta_sender,
-            entry_notification_sender.clone(),
+            None,
             vote_tracker.clone(),
             retransmit_slots_sender,
             gossip_verified_vote_hash_receiver,
@@ -1197,7 +1141,7 @@ impl Validator {
             },
             &rpc_subscriptions,
             transaction_status_sender,
-            entry_notification_sender,
+            None,
             &blockstore,
             &config.broadcast_stage_type,
             &exit,
@@ -1234,14 +1178,14 @@ impl Validator {
             stats_reporter_service,
             gossip_service,
             serve_repair_service,
-            json_rpc_service,
+            json_rpc_service: None,
             pubsub_service,
             rpc_completed_slots_service,
             optimistically_confirmed_bank_tracker,
             transaction_status_service,
             rewards_recorder_service,
             cache_block_meta_service,
-            entry_notifier_service,
+            entry_notifier_service: None,
             system_monitor_service,
             sample_performance_service,
             poh_timing_report_service,
