@@ -2646,7 +2646,7 @@ impl ReplayStage {
             let bank = &bank_forks.read().unwrap().get(bank_slot).unwrap();
             let parent_slot = bank.parent_slot();
             let prev_leader_slot = progress.get_bank_prev_leader_slot(bank);
-            let (num_blocks_on_fork, num_dropped_blocks_on_fork) = {
+            /*let (num_blocks_on_fork, num_dropped_blocks_on_fork) = {
                 let stats = progress
                     .get(&parent_slot)
                     .expect("parent of active bank must exist in progress map");
@@ -2666,7 +2666,10 @@ impl ReplayStage {
                     num_blocks_on_fork,
                     num_dropped_blocks_on_fork,
                 )
-            });
+            });*/
+            let replay_stats = RwLock::new(ReplaySlotStats::default());
+            let replay_progress = RwLock::new(ConfirmationProgress::default());
+
             info!("Before conditional");
             if bank.collector_id() != my_pubkey {
                 info!("Before reply blockstore into bank");
@@ -2674,8 +2677,8 @@ impl ReplayStage {
                 let blockstore_result = Self::replay_blockstore_into_bank(
                     bank,
                     blockstore,
-                    &bank_progress.replay_stats,
-                    &bank_progress.replay_progress,
+                    &replay_stats,
+                    &replay_progress,
                     transaction_status_sender,
                     entry_notification_sender,
                     &replay_vote_sender.clone(),
