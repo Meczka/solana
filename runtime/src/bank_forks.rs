@@ -122,6 +122,9 @@ impl BankForks {
             .map(|(k, b)| (*k, b.clone()))
             .collect()
     }
+    pub fn newest_bank(&self) -> Vec<Slot> {
+        vec![*self.banks().iter().map(|(slot, _)| slot).max().unwrap()]
+    }
 
     pub fn active_bank_slots(&self) -> Vec<Slot> {
         self.banks

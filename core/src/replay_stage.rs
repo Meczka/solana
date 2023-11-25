@@ -2683,6 +2683,7 @@ impl ReplayStage {
                     log_messages_bytes_limit,
                     prioritization_fee_cache,
                 );
+                info!("Replay result {:?}", blockstore_result);
                 replay_blockstore_time.stop();
                 replay_result.replay_result = Some(blockstore_result);
                 replay_timing.replay_blockstore_us += replay_blockstore_time.as_us();
@@ -2907,7 +2908,7 @@ impl ReplayStage {
         prioritization_fee_cache: &PrioritizationFeeCache,
         purge_repair_slot_counter: &mut PurgeRepairSlotCounter,
     ) -> bool /* completed a bank */ {
-        let active_bank_slots = bank_forks.read().unwrap().active_bank_slots();
+        let active_bank_slots = bank_forks.read().unwrap().newest_bank();
         let num_active_banks = active_bank_slots.len();
         trace!(
             "{} active bank(s) to replay: {:?}",
