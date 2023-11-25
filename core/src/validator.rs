@@ -1074,6 +1074,7 @@ impl Validator {
         .as_ref()
         .map(|service| service.sender_cloned());*/
         let (replay_vote_sender, replay_vote_receiver) = unbounded();
+        let leader_schedule_cache = Arc::new(LeaderScheduleCache::default());
         let tvu = Tvu::new(
             vote_account,
             authorized_voter_keypairs,
