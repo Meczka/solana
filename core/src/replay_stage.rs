@@ -2957,7 +2957,7 @@ impl ReplayStage {
                     .collect()
             };
 
-            Self::process_replay_results(
+            /*Self::process_replay_results(
                 blockstore,
                 bank_forks,
                 progress,
@@ -2979,7 +2979,9 @@ impl ReplayStage {
                 block_metadata_notifier,
                 &replay_result_vec,
                 purge_repair_slot_counter,
-            )
+            )*/
+            /*Hardcoding result as true*/
+            true
         } else {
             false
         }
