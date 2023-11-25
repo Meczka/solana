@@ -654,7 +654,7 @@ impl Validator {
         let poh_timing_report_service =
             PohTimingReportService::new(poh_timing_point_receiver, &exit);
 
-        let genesis_config =
+        /*let genesis_config =
             open_genesis_config(ledger_path, config.max_genesis_archive_unpacked_size);
         let ledger_path_2 = get_tmp_ledger_path_auto_delete!();
         let blockstore = Arc::new(Blockstore::open(ledger_path_2.path()).unwrap());
@@ -673,7 +673,7 @@ impl Validator {
         let rewards_recorder_sender = None;
         let cache_block_meta_service = None;
         let cache_block_meta_sender = None;
-        let starting_snapshot_hashes = None;
+        let starting_snapshot_hashes = None;*/
 
         let (
             genesis_config,
