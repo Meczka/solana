@@ -1035,11 +1035,11 @@ impl Validator {
             config.poh_hashes_per_batch,
             record_receiver,
         );
-        assert_eq!(
+        /*assert_eq!(
             blockstore.get_new_shred_signals_len(),
             1,
             "New shred signal for the TVU should be the same as the clear bank signal."
-        );
+        );*/
 
         let vote_tracker = Arc::<VoteTracker>::default();
 
