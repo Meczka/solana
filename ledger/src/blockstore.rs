@@ -916,79 +916,77 @@ impl Blockstore {
 
         metrics.insert_shreds_elapsed_us += start.as_us();
         let mut start = Measure::start("Shred recovery");
-        if let Some(leader_schedule_cache) = leader_schedule {
-            let recovered_shreds = Self::try_shred_recovery(
-                db,
-                &erasure_metas,
-                &mut index_working_set,
-                &just_inserted_shreds,
-                reed_solomon_cache,
-            );
+        let recovered_shreds = Self::try_shred_recovery(
+            db,
+            &erasure_metas,
+            &mut index_working_set,
+            &just_inserted_shreds,
+            reed_solomon_cache,
+        );
 
-            metrics.num_recovered += recovered_shreds
-                .iter()
-                .filter(|shred| shred.is_data())
-                .count();
-            let recovered_shreds: Vec<_> = recovered_shreds
-                .into_iter()
-                .filter_map(|shred| {
-                    let leader =
-                        leader_schedule_cache.slot_leader_at(shred.slot(), /*bank=*/ None)?;
-                    if !shred.verify(&leader) {
-                        metrics.num_recovered_failed_sig += 1;
-                        return None;
-                    }
-                    // Since the data shreds are fully recovered from the
-                    // erasure batch, no need to store coding shreds in
-                    // blockstore.
-                    if shred.is_code() {
-                        return Some(shred);
-                    }
-                    match self.check_insert_data_shred(
-                        shred.clone(),
-                        &mut erasure_metas,
-                        &mut index_working_set,
-                        &mut slot_meta_working_set,
-                        &mut write_batch,
-                        &mut just_inserted_shreds,
-                        &mut index_meta_time_us,
-                        is_trusted,
-                        &mut duplicate_shreds,
-                        leader_schedule,
-                        ShredSource::Recovered,
-                    ) {
-                        Err(InsertDataShredError::Exists) => {
-                            metrics.num_recovered_exists += 1;
-                            None
-                        }
-                        Err(InsertDataShredError::InvalidShred) => {
-                            metrics.num_recovered_failed_invalid += 1;
-                            None
-                        }
-                        Err(InsertDataShredError::BlockstoreError(err)) => {
-                            metrics.num_recovered_blockstore_error += 1;
-                            error!("blockstore error: {}", err);
-                            None
-                        }
-                        Ok(completed_data_sets) => {
-                            newly_completed_data_sets.extend(completed_data_sets);
-                            metrics.num_recovered_inserted += 1;
-                            Some(shred)
-                        }
-                    }
-                })
-                // Always collect recovered-shreds so that above insert code is
-                // executed even if retransmit-sender is None.
-                .collect();
-            if !recovered_shreds.is_empty() {
-                if let Some(retransmit_sender) = retransmit_sender {
-                    let _ = retransmit_sender.send(
-                        recovered_shreds
-                            .into_iter()
-                            .map(Shred::into_payload)
-                            .collect(),
-                    );
+        metrics.num_recovered += recovered_shreds
+            .iter()
+            .filter(|shred| shred.is_data())
+            .count();
+        let recovered_shreds: Vec<_> = recovered_shreds
+            .into_iter()
+            .filter_map(|shred| {
+                /*let leader =
+                    leader_schedule_cache.slot_leader_at(shred.slot(), /*bank=*/ None)?;
+                if !shred.verify(&leader) {
+                    metrics.num_recovered_failed_sig += 1;
+                    return None;
+                }*/
+                // Since the data shreds are fully recovered from the
+                // erasure batch, no need to store coding shreds in
+                // blockstore.
+                if shred.is_code() {
+                    return Some(shred);
                 }
+                match self.check_insert_data_shred(
+                    shred.clone(),
+                    &mut erasure_metas,
+                    &mut index_working_set,
+                    &mut slot_meta_working_set,
+                    &mut write_batch,
+                    &mut just_inserted_shreds,
+                    &mut index_meta_time_us,
+                    is_trusted,
+                    &mut duplicate_shreds,
+                    None,
+                    ShredSource::Recovered,
+                ) {
+                    Err(InsertDataShredError::Exists) => {
+                        metrics.num_recovered_exists += 1;
+                        None
+                    }
+                    Err(InsertDataShredError::InvalidShred) => {
+                        metrics.num_recovered_failed_invalid += 1;
+                        None
+                    }
+                    Err(InsertDataShredError::BlockstoreError(err)) => {
+                        metrics.num_recovered_blockstore_error += 1;
+                        error!("blockstore error: {}", err);
+                        None
+                    }
+                    Ok(completed_data_sets) => {
+                        newly_completed_data_sets.extend(completed_data_sets);
+                        metrics.num_recovered_inserted += 1;
+                        Some(shred)
+                    }
+                }
+            })
+            // Always collect recovered-shreds so that above insert code is
+            // executed even if retransmit-sender is None.
+            .collect();
+        if !recovered_shreds.is_empty() {
+            if let Some(retransmit_sender) = retransmit_sender {
+                let _ = retransmit_sender.send(
+                    recovered_shreds
+                        .into_iter()
+                        .map(Shred::into_payload)
+                        .collect(),
+                );
             }
         }
         start.stop();
