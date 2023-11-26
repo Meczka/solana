@@ -697,7 +697,7 @@ impl Validator {
         let (_, completed_slots_receiver) = unbounded();
         let (_, pruned_banks_receiver) = unbounded();*/
         let starting_snapshot_hashes = None;
-        //let leader_schedule_cache = LeaderScheduleCache::default();
+        let leader_schedule_cache = LeaderScheduleCache::default();
         //let bank = Bank::new_for_tests(&genesis_config);
         //let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
         let transaction_status_sender = None;
@@ -1074,7 +1074,6 @@ impl Validator {
         .as_ref()
         .map(|service| service.sender_cloned());*/
         let (replay_vote_sender, replay_vote_receiver) = unbounded();
-        let leader_schedule_cache = Arc::new(LeaderScheduleCache::default());
         let tvu = Tvu::new(
             vote_account,
             authorized_voter_keypairs,
