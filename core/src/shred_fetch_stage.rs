@@ -54,6 +54,14 @@ impl ShredFetchStage {
         let mut stats = ShredFetchStats::default();
 
         for mut packet_batch in recvr {
+            if let Ok(shred) = Shred::new_from_serialized_shred(packet.data(|data| {
+                // Do something with the data here, for example, just return it as is
+                data.to_vec()
+            })) {
+                println!("Shred data: {:?}", shred);
+            } else {
+                println!("Failed to parse shred from packet data");
+            }
             if last_updated.elapsed().as_millis() as u64 > DEFAULT_MS_PER_SLOT {
                 last_updated = Instant::now();
                 let root_bank = {
