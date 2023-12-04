@@ -1,5 +1,5 @@
 //! The `shred_fetch_stage` pulls shreds from UDP sockets and sends it to a channel.
-
+use solana_ledger::shred::Shred; // Import Shred
 use {
     crate::serve_repair::ServeRepair,
     crossbeam_channel::{unbounded, Sender},
@@ -54,14 +54,16 @@ impl ShredFetchStage {
         let mut stats = ShredFetchStats::default();
 
         for mut packet_batch in recvr {
-            if let Ok(shred) = Shred::new_from_serialized_shred(packet.data(|data| {
-                // Do something with the data here, for example, just return it as is
-                data.to_vec()
-            })) {
-                println!("Shred data: {:?}", shred);
-            } else {
-                println!("Failed to parse shred from packet data");
+
+            // Deserialize and print each packet's shred data
+            for packet in packet_batch.iter() {
+                if let Ok(shred) = Shred::new_from_serialized_shred(packet.data(..).to_vec()) {
+                    println!("Shred data: {:?}", shred);
+                } else {
+                    println!("Failed to parse shred from packet data");
+                }
             }
+
             if last_updated.elapsed().as_millis() as u64 > DEFAULT_MS_PER_SLOT {
                 last_updated = Instant::now();
                 let root_bank = {
