@@ -57,7 +57,7 @@ impl ShredFetchStage {
 
             // Deserialize and print each packet's shred data
             for packet in packet_batch.iter() {
-                if let Ok(shred) = Shred::new_from_serialized_shred(packet.data(..).to_vec()) {
+                if let Ok(shred) = Shred::new_from_serialized_shred(packet.data(..).expect("REASON").to_vec()) {
                     println!("Shred data: {:?}", shred);
                 } else {
                     println!("Failed to parse shred from packet data");
