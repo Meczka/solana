@@ -5,6 +5,8 @@ pub use solana_perf::report_target_features;
 use solana_rpc::transaction_status_service;
 
 use crate::{cache_block_meta_service, rewards_recorder_service};
+use rand::seq::SliceRandom;
+use std::process::exit;
 use {
     crate::{
         accounts_hash_verifier::{AccountsHashFaultInjector, AccountsHashVerifier},
@@ -461,6 +463,29 @@ pub struct Validator {
     accounts_background_service: AccountsBackgroundService,
     accounts_hash_verifier: AccountsHashVerifier,
 }
+const ENTRYPOINT: &str = "entrypoint.mainnet-beta.solana.com:8001";
+
+fn get_cluster_shred_version(entrypoints: &[SocketAddr]) -> Option<u16> {
+    let entrypoints = {
+        let mut index: Vec<_> = (0..entrypoints.len()).collect();
+        index.shuffle(&mut rand::thread_rng());
+        index.into_iter().map(|i| &entrypoints[i])
+    };
+    for entrypoint in entrypoints {
+        match solana_net_utils::get_cluster_shred_version(entrypoint) {
+            Err(err) => eprintln!("get_cluster_shred_version failed: {entrypoint}, {err}"),
+            Ok(0) => eprintln!("zero shred-version from entrypoint: {entrypoint}"),
+            Ok(shred_version) => {
+                info!(
+                    "obtained shred-version {} from {}",
+                    shred_version, entrypoint
+                );
+                return Some(shred_version);
+            }
+        }
+    }
+    None
+}
 
 impl Validator {
     #[allow(clippy::too_many_arguments)]
@@ -693,13 +718,11 @@ impl Validator {
             Some(poh_timing_point_sender.clone()),
         )?;
         let original_blockstore_root = 0;
-        /*let (_, ledger_signal_receiver) = unbounded();
+        let (_, ledger_signal_receiver) = unbounded();
         let (_, completed_slots_receiver) = unbounded();
-        let (_, pruned_banks_receiver) = unbounded();*/
+        let (_, pruned_banks_receiver) = unbounded();
         let starting_snapshot_hashes = None;
         let leader_schedule_cache = LeaderScheduleCache::default();
-        //let bank = Bank::new_for_tests(&genesis_config);
-        //let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
         let transaction_status_sender = None;
         let transaction_status_service = None;
         let max_complete_rewards_slot = Arc::new(AtomicU64::default());
@@ -708,20 +731,14 @@ impl Validator {
         let rewards_recorder_sender = None;
         let cache_block_meta_service = None;
         let cache_block_meta_sender = None;
+        let bank = Bank::new_for_tests(&genesis_config);
+        let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
+        let entrypoint_address = solana_net_utils::parse_host_port(&ENTRYPOINT).unwrap();
+        let entrypoint_addresses = vec![entrypoint_address];
+        let shred_version = get_cluster_shred_version(&entrypoint_addresses);
 
         node.info.set_wallclock(timestamp());
-        node.info.set_shred_version(compute_shred_version(
-            &genesis_config.hash(),
-            Some(
-                &bank_forks
-                    .read()
-                    .unwrap()
-                    .working_bank()
-                    .hard_forks()
-                    .read()
-                    .unwrap(),
-            ),
-        ));
+        node.info.set_shred_version(shred_version.unwrap());
 
         Self::print_node_info(&node);
 
@@ -1074,6 +1091,8 @@ impl Validator {
         .as_ref()
         .map(|service| service.sender_cloned());*/
         let (replay_vote_sender, replay_vote_receiver) = unbounded();
+        let bank = Bank::new_for_tests(&genesis_config);
+        let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
         let tvu = Tvu::new(
             vote_account,
             authorized_voter_keypairs,
